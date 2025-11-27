@@ -1,27 +1,17 @@
-/**
- * Horizontal Scroll Animation
- * Works on Chrome, Safari, and iOS
- *
- * HOW IT WORKS:
- * 1. Each .horizontal-blocks-wrapper has a tall height (500vh) to create scroll space
- * 2. The inner content is sticky so it stays visible while scrolling
- * 3. As you scroll through the wrapper, the blocks slide horizontally
- */
-
 document.addEventListener('DOMContentLoaded', function() {
   initHorizontalScrollAnimation();
 });
 
 function initHorizontalScrollAnimation() {
   // Get all horizontal scroll sections (supports multiple on page)
-  const sections = document.querySelectorAll('.horizontal-blocks-wrapper');
+  const horizontalWrappers = document.querySelectorAll('.horizontal-blocks-wrapper');
 
-  sections.forEach(function(section) {
-    const blocksList = section.querySelector('.horizontal-blocks-list');
+  horizontalWrappers.forEach(function(horizontalWrapper) {
+    const blocksList = horizontalWrapper.querySelector('.horizontal-blocks-list');
     if (!blocksList) return;
 
     // Store reference for scroll handler
-    section._blocksList = blocksList;
+    horizontalWrapper._blocksList = blocksList;
   });
 
   // Single scroll listener for performance
@@ -32,15 +22,14 @@ function initHorizontalScrollAnimation() {
 }
 
 function handleScroll() {
-  const sections = document.querySelectorAll('.horizontal-blocks-wrapper');
+  const horizontalWrappers = document.querySelectorAll('.horizontal-blocks-wrapper');
 
-  sections.forEach(function(section) {
-    const blocksList = section._blocksList;
+  horizontalWrappers.forEach(function(horizontalWrapper) {
+    const blocksList = horizontalWrapper._blocksList;
     if (!blocksList) return;
 
     // Calculate scroll progress within this section
-    const progress = calculateProgress(section);
-
+    const progress = calculateProgress(horizontalWrapper);
     // Calculate how far to translate
     const translateX = calculateTranslateX(blocksList, progress);
 
@@ -49,28 +38,38 @@ function handleScroll() {
   });
 }
 
-/**
- * Calculate scroll progress (0 to 1) within a section
- * 0 = section just entered viewport from bottom
- * 1 = section about to leave viewport from top
- */
+
 function calculateProgress(section) {
   const rect = section.getBoundingClientRect();
   const sectionHeight = section.offsetHeight;
   const viewportHeight = window.innerHeight;
 
+  // Buffer zones (matches your CSS: contain 10% exit -90%)
+  const startBuffer = 0.20; // 10% - first block stays visible
+  const endBuffer = 0.20;   // 10% - last block stays visible
+
   // How far the section top is from viewport top
-  // Positive = section top is below viewport top
-  // Negative = section top is above viewport top
   const scrolled = -rect.top;
 
   // Total scrollable distance within this section
-  // (section height minus one viewport height, since content is sticky)
   const scrollableDistance = sectionHeight - viewportHeight;
 
-  // Calculate progress (clamped between 0 and 1)
-  let progress = scrolled / scrollableDistance;
-  progress = Math.max(0, Math.min(1, progress));
+  // Calculate raw progress (0 to 1)
+  let rawProgress = scrolled / scrollableDistance;
+
+  // Apply buffer zones:
+  // - Before startBuffer: progress = 0 (first block visible)
+  // - After (1 - endBuffer): progress = 1 (last block visible)
+  // - Between: scale from 0 to 1
+  let progress;
+  if (rawProgress <= startBuffer) {
+    progress = 0;
+  } else if (rawProgress >= 1 - endBuffer) {
+    progress = 1;
+  } else {
+    // Scale the middle portion (startBuffer to 1-endBuffer) to 0-1
+    progress = (rawProgress - startBuffer) / (1 - startBuffer - endBuffer);
+  }
 
   return progress;
 }
