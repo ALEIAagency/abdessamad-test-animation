@@ -86,10 +86,8 @@ body {
   min-height: 100vh;
   padding: 5rem 0;
   background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-  /* scroll-timeline: --blocks-scroll; */
-    height: 500vh;
-    position: relative;
-  view-timeline: --card-timeline;
+  height: 500vh;
+  position: relative;
 }
 
 .horizontal-blocks-wrapper .section-title {
@@ -100,7 +98,6 @@ body {
 
 .horizontal-blocks-content {
   width: 100%;
-  overflow-x: auto;
   padding: 2rem;
   position: sticky;
   top: 0;
@@ -135,9 +132,8 @@ body {
   width: max-content;
   flex: 1;
   align-items: stretch;
-  animation: linear both slideContent;
-  animation-timeline: --card-timeline;
-  animation-range: contain 10%;
+  /* Animation controlled by JavaScript for cross-browser support */
+  will-change: transform;
 }
 
 .horizontal-block {
@@ -240,8 +236,4 @@ body {
 }
 
 
-@keyframes slideContent {
-    to {
-        transform: translateX(calc(-100% + 100vw - (1.5rem + 2rem)));
-    }
-}
+/* Keyframes removed - animation now handled by JavaScript for iOS/Safari support */
