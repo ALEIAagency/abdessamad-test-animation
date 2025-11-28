@@ -1,9 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
   initHorizontalScrollAnimation();
-
-
 });
 
+// Track scroll lock state
 let isScrollLocked = false;
 let scrollLockTimeout = null;
 let lastLockPosition = 0;
@@ -37,17 +36,6 @@ function unlockScroll(delay) {
 function initHorizontalScrollAnimation() {
   // Get all horizontal scroll sections (supports multiple on page)
   const horizontalWrappers = document.querySelectorAll('.horizontal-blocks-wrapper');
-  const blocksListHeight = horizontalWrappers[0].querySelector('.horizontal-blocks-content').clientHeight;
-  
-  inView.offset(blocksListHeight);
-  inView('.horizontal-blocks-wrapper')
-  .on('enter', el => {
-    lockScroll(window.scrollY);
-    unlockScroll(scrollLockDuration);
-  })
-  // .on('exit', el => {
-  //   console.log('out of view with offset');
-  // });
 
   horizontalWrappers.forEach(function(horizontalWrapper) {
     const blocksList = horizontalWrapper.querySelector('.horizontal-blocks-list');
@@ -55,6 +43,9 @@ function initHorizontalScrollAnimation() {
 
     // Store reference for scroll handler
     horizontalWrapper._blocksList = blocksList;
+    // Track lock states per wrapper
+    horizontalWrapper._startLocked = false;
+    horizontalWrapper._endLocked = false;
   });
 
   // Single scroll listener for performance
@@ -66,18 +57,52 @@ function initHorizontalScrollAnimation() {
 
 function handleScroll() {
   const horizontalWrappers = document.querySelectorAll('.horizontal-blocks-wrapper');
+  const currentScrollY = window.scrollY;
 
   horizontalWrappers.forEach(function(horizontalWrapper) {
     const blocksList = horizontalWrapper._blocksList;
     if (!blocksList) return;
 
-    // Calculate scroll progress within this section
-    const progress = calculateProgress(horizontalWrapper);
-    // Calculate how far to translate
-    const translateX = calculateTranslateX(blocksList, progress);
+    const rect = horizontalWrapper.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
 
-    // Apply transform
-    blocksList.style.transform = 'translateX(' + translateX + 'px)';
+    // Check if section is in viewport
+    const isInViewport = rect.top < viewportHeight && rect.bottom > 0;
+
+    if (isInViewport) {
+      // Calculate scroll progress within this section
+      const progressData = calculateProgress(horizontalWrapper);
+      // Calculate how far to translate
+      const translateX = calculateTranslateX(blocksList, progressData.progress);
+
+    
+      // Apply transform
+      blocksList.style.transform = 'translateX(' + translateX + 'px)';
+      // Lock scroll at animation start (when first block fills viewport)
+      if (progressData.atStart && !horizontalWrapper._startLocked) {
+        horizontalWrapper._startLocked = true;
+        lockScroll(currentScrollY);
+        unlockScroll(scrollLockDuration); // Unlock after 300ms
+      }
+
+      // Lock scroll at animation end (when last block fills viewport)
+      if (progressData.atEnd && !horizontalWrapper._endLocked) {
+        horizontalWrapper._endLocked = true;
+        lockScroll(currentScrollY);
+        unlockScroll(scrollLockDuration); // Unlock after 300ms
+      }
+
+      // Reset lock flags when user scrolls back into middle of animation
+      if (!progressData.atStart && !progressData.atEnd) {
+        horizontalWrapper._startLocked = false;
+        horizontalWrapper._endLocked = false;
+      }
+      
+    } else {
+      // Reset lock flags when section is out of viewport
+      horizontalWrapper._startLocked = false;
+      horizontalWrapper._endLocked = false;
+    }
   });
 }
 
@@ -86,10 +111,6 @@ function calculateProgress(section) {
   const rect = section.getBoundingClientRect();
   const sectionHeight = section.offsetHeight;
   const viewportHeight = window.innerHeight;
-
-  // Buffer zones (matches your CSS: contain 10% exit -90%)
-  const startBuffer = 0.25; // 20% - first block stays visible
-  const endBuffer = 0.35;   // 20% - last block stays visible
 
   // How far the section top is from viewport top
   const scrolled = -rect.top;
@@ -100,21 +121,22 @@ function calculateProgress(section) {
   // Calculate raw progress (0 to 1)
   let rawProgress = scrolled / scrollableDistance;
 
-  // Apply buffer zones:
-  // - Before startBuffer: progress = 0 (first block visible)
-  // - After (1 - endBuffer): progress = 1 (last block visible)
-  // - Between: scale from 0 to 1
-  let progress;
-  if (rawProgress <= startBuffer) {
-    progress = 0;
-  } else if (rawProgress >= 1 - endBuffer) {
-    progress = 1;
-  } else {
-    // Scale the middle portion (startBuffer to 1-endBuffer) to 0-1
-    progress = (rawProgress - startBuffer) / (1 - startBuffer - endBuffer);
-  }
+  // Clamp progress between 0 and 1
+  let progress = Math.max(0, Math.min(1, rawProgress));
 
-  return progress;
+  // Detect when animation reaches start or end
+  // atStart: section just entered full viewport (progress near 0)
+  // atEnd: animation complete, last block visible (progress near 1)
+  const threshold = 0.01; // Small threshold for detection
+  const atStart = rawProgress >= 0 && rawProgress < threshold;
+  const atEnd = rawProgress > (1 - threshold) && rawProgress <= 1;
+  console.log("atStart",atStart)
+  console.log("atEnd",atEnd)
+  return {
+    progress: progress,
+    atStart: atStart,
+    atEnd: atEnd
+  };
 }
 
 /**
