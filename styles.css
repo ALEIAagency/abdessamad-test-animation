@@ -132,7 +132,7 @@ body {
   width: max-content;
   flex: 1;
   align-items: stretch;
-  transition: .3s all linear;
+  /* transition: .3s all linear; */
   /* Animation controlled by JavaScript for cross-browser support */
   will-change: transform;
 }
