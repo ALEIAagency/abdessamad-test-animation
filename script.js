@@ -45,8 +45,8 @@ function calculateProgress(section) {
   const viewportHeight = window.innerHeight;
 
   // Buffer zones (matches your CSS: contain 10% exit -90%)
-  const startBuffer = 0.20; // 10% - first block stays visible
-  const endBuffer = 0.20;   // 10% - last block stays visible
+  const startBuffer = 0.20; // 20% - first block stays visible
+  const endBuffer = 0.30;   // 20% - last block stays visible
 
   // How far the section top is from viewport top
   const scrolled = -rect.top;
